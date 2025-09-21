@@ -8,17 +8,18 @@ A math-based survival game where players solve arithmetic problems to move aroun
 ### Phase 1: Core Game Foundation (MVP)
 **Timeline: 2-3 weeks**
 
-#### 1.0 Bootstrap Runnable Game Shell
-- [ ] Initialize repo with Vite (React + TypeScript)
-- [ ] Add Phaser 3 and mount a blank `GameScene` to a canvas
-- [ ] Render placeholder HUD text (e.g., `Health: 100 | Score: 0`)
-- [ ] Display title "Math Game" and app version in the corner
-- [ ] Ensure dev server runs with hot reload
+#### 1.0 Bootstrap Expo Runnable Game Shell
+- [ ] Initialize project with Expo (React Native, TypeScript)
+- [ ] Replace default screen with placeholder HUD (Health: 100, Score: 0)
+- [ ] Show title "Math Game" and app version in the header
+- [ ] Ensure Expo dev server starts and app runs on simulator and device (Expo Go)
+- [ ] Update `docs/RUNNING.md` with Expo instructions (phone testing via QR)
 
 Acceptance Criteria:
-- [ ] `npm run dev` starts without errors
-- [ ] A Phaser canvas is visible with a solid background color
-- [ ] Placeholder HUD text is visible over the canvas
+- [ ] `npm run start` opens Expo Dev Tools without errors
+- [ ] App runs on iOS Simulator and/or Android Emulator
+- [ ] App opens on a real phone via Expo Go QR code
+- [ ] Screen shows title and HUD placeholder
 - [ ] Running instructions exist at `docs/RUNNING.md`
 
 #### 1.1 Basic Game Engine Setup

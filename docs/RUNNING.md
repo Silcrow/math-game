@@ -1,11 +1,54 @@
 # Running the Math Game (Development)
 
-This guide helps you get to a visible, runnable game screen quickly (the "Bootstrap Runnable Game Shell" in `docs/ROADMAP.md`).
+This guide helps you get to a visible, runnable game screen quickly. The project now uses **Expo (React Native)** as the primary stack. Legacy web (Vite) notes are preserved below.
+
+## Expo Quick Start (Current)
+
+### Prerequisites
+- Node.js 20.19.4+ recommended (Expo/React Native toolchain requires >=20.19.4)
+- iOS: Xcode (simulator) or iPhone with Expo Go
+- Android: Android Studio (emulator) or Android device with Expo Go
+
+### 1) Install dependencies
+```bash
+npm install
+```
+
+### 2) Start Expo dev server
+```bash
+npm run start
+# or
+npm run ios     # open iOS Simulator
+npm run android # open Android Emulator
+npm run web     # optional: web preview
+```
+
+### 3) Test on your phone with Expo Go
+- Install Expo Go from App Store / Google Play.
+- After `npm run start`, a terminal or browser tab (Expo CLI) shows a QR code.
+- Scan the QR code with your phone’s camera (iOS) or Expo Go (Android).
+- The app should open showing:
+  - Title: "Math Game v0.0.1"
+  - HUD text: "Health: 100" and "Score: 0"
+
+Troubleshooting (Expo/phone):
+- Ensure phone and computer are on the same Wi‑Fi.
+- If QR connect fails, press `s` in the Expo CLI to switch connection mode (LAN/Tunnel/Local). "Tunnel" is most reliable on restricted networks.
+- On iOS Simulator: open via `npm run ios`.
+- On Android Emulator: ensure an emulator is running or a device is connected (USB, with debugging enabled) and run `npm run android`.
+
+---
 
 ## Prerequisites
 - Node.js v18+
 - npm (comes with Node) or yarn
 - Git (optional but recommended)
+
+---
+
+## Legacy: Vite (Web) Instructions (previous stack)
+
+These remain for reference if you ever want a web preview build. The current app is an Expo (React Native) project.
 
 ## 1) Bootstrap the Project
 If you have not yet initialized the project with Vite + React + TypeScript:
