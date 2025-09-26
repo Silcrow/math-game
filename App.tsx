@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
+import { GameScreen, type GridPos } from './src/screens/GameScreen';
 
 export default function App() {
   return (
@@ -14,7 +15,14 @@ export default function App() {
         <Text style={styles.hudText}>Score: 0</Text>
       </View>
 
-      <Text style={styles.subtitle}>This is the minimal Expo shell. Gameplay coming next.</Text>
+      <GameScreen
+        onTilePress={(pos: GridPos) => {
+          // Placeholder: later will move player / solve problem
+          console.log('Tile pressed', pos);
+        }}
+      />
+
+      <Text style={[styles.subtitle, { marginTop: 16 }]}>Tap tiles to select (placeholder interaction).</Text>
 
       <StatusBar style="light" />
     </View>
@@ -24,10 +32,11 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0d1117',
+    backgroundColor: '#0b3d2e', // felt green table
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 12,
   },
   header: {
     alignItems: 'center',
