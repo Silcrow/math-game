@@ -8,7 +8,17 @@ interface GameScreenProps {
   selected?: GridPos | null;
 }
 
+// Layout & visual constants for the mahjong-like card appearance
 const SIZE = 3;
+const CARD_WIDTH_PERCENT = '30%';
+const CARD_ASPECT_RATIO = 0.7; // taller than wide
+const TABLE_BG = '#0b3d2e';
+const TILE_FACE = '#fff9ee';
+const TILE_EDGE = '#e6dfd4';
+const TILE_BORDER = 'rgba(0,0,0,0.15)';
+const GLYPH_RED = '#c0392b';
+const GLYPH_GREEN = '#2e7d32';
+const GOLD_EDGE = '#f4d03f';
 
 export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected }) => {
   const [internalSelected, setInternalSelected] = useState<GridPos | null>(null);
