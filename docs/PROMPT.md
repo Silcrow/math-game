@@ -15,5 +15,4 @@ modifying each aspect:
 The above should be "game-name classic" version, with a "game settings" for adjusting pure numericals (for the sake of experimenting balancing the game), like gold random %, health drop rate, etc. Not sure yet what else should be adjustable, but I'll eventually want it to be fun but also pushes players to "learn math" by rewarding solving their weaknesses (this is complicated, coz it means reward mechanism adapts)
 
 
-Option B: Add navigation (expo-router) and split screens (Menu, Game, Settings)
 Option C: Set up state store (Zustand) for health/score and tick timer

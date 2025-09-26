@@ -76,3 +76,22 @@ Date: 2025-09-26 (local)
 ### How to view
 - `npm run start`
 - Open Game screen → observe ivory cards with shadows and red/green glyphs; tap to see pressed/selected states.
+
+---
+
+## Commit: feat(store): add Zustand game store (health/score/run) and 1s tick; show live HUD on Game
+Date: 2025-09-26 (local)
+
+### Summary
+- Installed Zustand and introduced a centralized game store with `health`, `score`, and `isRunning`.
+- Added a reusable tick hook that updates health (-1) and score (+1) every second while the game is running.
+- Integrated the store into the Game route to display a live HUD and reset behavior when health reaches 0.
+
+### Key changes
+- Added: `src/store/gameStore.ts` — Zustand store with actions `decreaseHealth`, `increaseScore`, `setRunning`, `reset`.
+- Added: `src/hooks/useGameTick.ts` — 1-second interval tick that mutates store state when `isRunning` is true.
+- Updated: `app/game.tsx` — subscribes to store slices, renders `Health: X | Score: Y`, runs `useGameTick()`.
+
+### How to view
+- `npm run start`
+- Open Game screen; observe health decrease and score increase each second.
