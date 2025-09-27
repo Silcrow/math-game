@@ -95,3 +95,20 @@ Date: 2025-09-26 (local)
 ### How to view
 - `npm run start`
 - Open Game screen; observe health decrease and score increase each second.
+
+---
+
+## Commit: chore(deps): bump expo to ~54.0.10 for compatibility
+Date: 2025-09-27 (local)
+
+### Summary
+- Updated `expo` to the expected version for this SDK to improve compatibility and reduce startup warnings.
+
+### Key changes
+- Updated: `package.json`
+  - `expo`: `~54.0.9` → `~54.0.10`
+
+### How to verify
+- Run `npm install`
+- Start the project: `npm run start`
+- Confirm the version mismatch warning is gone from the Expo CLI output.
