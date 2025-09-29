@@ -3,6 +3,12 @@ Construction plan of the game:
 - 3x3 tile, player character, health bar, health bar decreases, walk to tile, hp increases.
 	- victory condition = survive as long as possible until death, then you get a top scoreboard (classic arcade style).
 
+[animation] Slide/scale when moving.
+[feedback] Brief shake/vibrate on invalid taps.
+Add a brief shake/vibrate for invalid taps.
+Ease timing variants (e.g., lower friction for faster slide).
+Movement SFX and snap sounds
+
 modifying each aspect:
 - random addition and subtraction problems are displayed on the tile the player's not on (use randomizer first, later, it's an actual card in a deck, with more complicated randomizing rules). Player doesn't click tile to move anymore. Instead, tiles never repeat (always unique) and typing the answer immediately moves player to that tile.
 - healing is now unequal = earlier, each tile heals 2 units as a placeholder, but now construct a mechanism so that it heals either 1, 2, 3 units. Later, healing amount will be baed on a the card.

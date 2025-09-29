@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 
 export type GridPos = { row: number; col: number };
 
@@ -24,6 +24,37 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   const [internalSelected, setInternalSelected] = useState<GridPos | null>(null);
   // Player starts in the middle card (row 1, col 1)
   const [playerPos, setPlayerPos] = useState<GridPos>({ row: 1, col: 1 });
+  const scale = useRef(new Animated.Value(1)).current;
+  const translate = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const wrapperLayout = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const tileLayouts = useRef<Record<string, { x: number; y: number; width: number; height: number }>>({});
+  const rowLayouts = useRef<Record<number, { x: number; y: number }>>({});
+  const measuredCount = useRef(0);
+
+  const markerSize = 28;
+
+  const keyFor = (r: number, c: number) => `${r}-${c}`;
+
+  const moveMarkerTo = (r: number, c: number) => {
+    const layout = tileLayouts.current[keyFor(r, c)];
+    if (!layout) return; // not laid out yet
+    // Center of the tile within wrapper
+    const targetX = layout.x + layout.width / 2 - markerSize / 2;
+    const targetY = layout.y + layout.height / 2 - markerSize / 2;
+    Animated.spring(translate, {
+      toValue: { x: targetX, y: targetY },
+      useNativeDriver: true,
+      friction: 6,
+      tension: 120,
+    }).start();
+  };
+
+  // Initialize marker once all 9 tiles have measured
+  useEffect(() => {
+    if (measuredCount.current >= 9) {
+      moveMarkerTo(playerPos.row, playerPos.col);
+    }
+  }, [playerPos.row, playerPos.col]);
 
   const isSelected = (r: number, c: number) => {
     const sel = selected ?? internalSelected;
@@ -36,9 +67,22 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   const rows = useMemo(() => [0, 1, 2], []);
 
   return (
-    <View style={styles.wrapper}>
+    <View
+      style={styles.wrapper}
+      onLayout={(e) => {
+        const { x, y, width, height } = e.nativeEvent.layout;
+        wrapperLayout.current = { x, y, width, height };
+      }}
+    >
       {rows.map((r) => (
-        <View key={`row-${r}`} style={styles.row}>
+        <View
+          key={`row-${r}`}
+          style={styles.row}
+          onLayout={(e) => {
+            const { x, y } = e.nativeEvent.layout;
+            rowLayouts.current[r] = { x, y };
+          }}
+        >
           {rows.map((c) => {
             const selectedTile = isSelected(r, c);
             const idx = r * SIZE + c;
@@ -57,6 +101,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                   const isHorzAdjacent = sameRow && Math.abs(c - playerPos.col) === 1;
                   if (isVertAdjacent || isHorzAdjacent) {
                     setPlayerPos(pos);
+                    moveMarkerTo(r, c);
+                    // Scale pulse
+                    Animated.sequence([
+                      Animated.timing(scale, { toValue: 0.9, duration: 80, useNativeDriver: true }),
+                      Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: true }),
+                    ]).start();
                   }
                   onTilePress?.(pos);
                 }}
@@ -65,21 +115,33 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                   selectedTile && styles.cardSelected,
                   pressed && styles.cardPressed,
                 ]}
+              onLayout={(e) => {
+                const { x, y, width, height } = e.nativeEvent.layout;
+                const row = rowLayouts.current[r] || { x: 0, y: 0 };
+                // Convert tile local coords (within row) to wrapper-relative coords
+                const absX = row.x + x;
+                const absY = row.y + y;
+                tileLayouts.current[keyFor(r, c)] = { x: absX, y: absY, width, height };
+                measuredCount.current += 1;
+              }}
               >
                 <View style={styles.cardFace}>
                   <Text style={styles.tileGlyph}>{glyph}</Text>
                   <Text style={styles.cardBottomGlyph}>{glyph}</Text>
-                  {playerPos.row === r && playerPos.col === c && (
-                    <View style={styles.playerMarker}>
-                      <Text style={styles.playerText}>P</Text>
-                    </View>
-                  )}
                 </View>
               </Pressable>
             );
           })}
         </View>
       ))}
+      {/* Floating player marker overlay */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.playerMarker, { transform: [{ translateX: translate.x }, { translateY: translate.y }, { scale }] }]}
+      >
+        <Text style={styles.playerText}>P</Text>
+      </Animated.View>
+
       <Text style={styles.help}>Move the player like a rook by one tile (up/down/left/right).</Text>
     </View>
   );
@@ -92,6 +154,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
+    position: 'relative',
   },
   row: {
     flexDirection: 'row',
@@ -151,9 +214,6 @@ const styles = StyleSheet.create({
   },
   playerMarker: {
     position: 'absolute',
-    top: '40%',
-    left: '50%',
-    transform: [{ translateX: -14 }, { translateY: -14 }],
     width: 28,
     height: 28,
     borderRadius: 14,
