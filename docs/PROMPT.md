@@ -4,7 +4,7 @@ Construction plan of the game:
 	- victory condition = survive as long as possible until death, then you get a top scoreboard (classic arcade style).
 
 
-[feedback] Brief shake/vibrate on invalid taps.
+
 [timing] Tweak spring friction/tension for faster/slower slide.
 [SFX] Add move/snap sounds.
 

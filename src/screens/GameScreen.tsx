@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Vibration } from 'react-native';
 
 export type GridPos = { row: number; col: number };
 
@@ -26,6 +26,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   const [playerPos, setPlayerPos] = useState<GridPos>({ row: 1, col: 1 });
   const scale = useRef(new Animated.Value(1)).current;
   const translate = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const shake = useRef(new Animated.Value(0)).current; // -1..1
   const wrapperLayout = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const tileLayouts = useRef<Record<string, { x: number; y: number; width: number; height: number }>>({});
   const rowLayouts = useRef<Record<number, { x: number; y: number }>>({});
@@ -45,9 +46,22 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
     Animated.spring(translate, {
       toValue: { x: targetX, y: targetY },
       useNativeDriver: true,
-      friction: 6,
-      tension: 120,
+      friction: 4,
+      tension: 180,
     }).start();
+  };
+
+  const invalidTapFeedback = () => {
+    // brief vibrate (if supported)
+    try { Vibration.vibrate(20); } catch {}
+    // shake animation sequence
+    Animated.sequence([
+      Animated.timing(shake, { toValue: -1, duration: 30, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 1, duration: 60, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: -1, duration: 60, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 1, duration: 60, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 0, duration: 30, useNativeDriver: true }),
+    ]).start();
   };
 
   // Initialize marker once all 9 tiles have measured
@@ -100,7 +114,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                   const sameRow = r === playerPos.row;
                   const isVertAdjacent = sameCol && Math.abs(r - playerPos.row) === 1;
                   const isHorzAdjacent = sameRow && Math.abs(c - playerPos.col) === 1;
-                  if (isVertAdjacent || isHorzAdjacent) {
+                  if (measured < 9) {
+                    // ignore taps until board is ready
+                    return;
+                  } else if (isVertAdjacent || isHorzAdjacent) {
                     setPlayerPos(pos);
                     moveMarkerTo(r, c);
                     // Scale pulse
@@ -108,6 +125,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                       Animated.timing(scale, { toValue: 0.9, duration: 80, useNativeDriver: true }),
                       Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: true }),
                     ]).start();
+                  } else {
+                    invalidTapFeedback();
                   }
                   onTilePress?.(pos);
                 }}
@@ -142,7 +161,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
       {/* Floating player marker overlay */}
       <Animated.View
         pointerEvents="none"
-        style={[styles.playerMarker, { transform: [{ translateX: translate.x }, { translateY: translate.y }, { scale }] }]}
+        style={[
+          styles.playerMarker,
+          {
+            transform: [
+              { translateX: translate.x },
+              { translateY: translate.y },
+              { scale },
+              { translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }) },
+            ],
+          },
+        ]}
       >
         <Text style={styles.playerText}>P</Text>
       </Animated.View>
