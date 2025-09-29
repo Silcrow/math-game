@@ -29,7 +29,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   const wrapperLayout = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const tileLayouts = useRef<Record<string, { x: number; y: number; width: number; height: number }>>({});
   const rowLayouts = useRef<Record<number, { x: number; y: number }>>({});
-  const measuredCount = useRef(0);
+  const measuredKeys = useRef<Set<string>>(new Set());
+  const [measured, setMeasured] = useState(0);
 
   const markerSize = 28;
 
@@ -51,10 +52,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
 
   // Initialize marker once all 9 tiles have measured
   useEffect(() => {
-    if (measuredCount.current >= 9) {
+    if (measured >= 9) {
       moveMarkerTo(playerPos.row, playerPos.col);
     }
-  }, [playerPos.row, playerPos.col]);
+  }, [playerPos.row, playerPos.col, measured]);
 
   const isSelected = (r: number, c: number) => {
     const sel = selected ?? internalSelected;
@@ -122,7 +123,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                 const absX = row.x + x;
                 const absY = row.y + y;
                 tileLayouts.current[keyFor(r, c)] = { x: absX, y: absY, width, height };
-                measuredCount.current += 1;
+                const k = keyFor(r, c);
+                if (!measuredKeys.current.has(k)) {
+                  measuredKeys.current.add(k);
+                  setMeasured((m) => m + 1);
+                }
               }}
               >
                 <View style={styles.cardFace}>
@@ -142,7 +147,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
         <Text style={styles.playerText}>P</Text>
       </Animated.View>
 
-      <Text style={styles.help}>Move the player like a rook by one tile (up/down/left/right).</Text>
+      <Text style={styles.help}>
+        {measured < 9 ? 'Preparing board…' : 'Move the player like a rook by one tile (up/down/left/right).'}
+      </Text>
     </View>
   );
 };
