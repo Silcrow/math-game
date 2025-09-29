@@ -1,3 +1,4 @@
+
 # Math Game Architecture & Codebase Structure
 
 ## Architecture Overview

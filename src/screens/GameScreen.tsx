@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Vibration } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Vibration, Switch } from 'react-native';
+import { playMove, playSnap } from '../sfx/sounds';
+import { useSettingsStore } from '../store/settingsStore';
+import { useGameStore } from '../store/gameStore';
 
 export type GridPos = { row: number; col: number };
 
@@ -35,6 +38,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
 
   const markerSize = 28;
 
+  // Settings (SFX/Haptics)
+  const enableSfx = useSettingsStore((s) => s.enableSfx);
+  const enableHaptics = useSettingsStore((s) => s.enableHaptics);
+  const setEnableSfx = useSettingsStore((s) => s.setEnableSfx);
+  const setEnableHaptics = useSettingsStore((s) => s.setEnableHaptics);
+  const increaseHealth = useGameStore((s) => s.increaseHealth);
+
   const keyFor = (r: number, c: number) => `${r}-${c}`;
 
   const moveMarkerTo = (r: number, c: number) => {
@@ -46,14 +56,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
     Animated.spring(translate, {
       toValue: { x: targetX, y: targetY },
       useNativeDriver: true,
-      friction: 4,
+      friction: 12,
       tension: 180,
     }).start();
   };
 
   const invalidTapFeedback = () => {
     // brief vibrate (if supported)
-    try { Vibration.vibrate(20); } catch {}
+    if (enableHaptics) {
+      try { Vibration.vibrate(20); } catch {}
+    }
     // shake animation sequence
     Animated.sequence([
       Animated.timing(shake, { toValue: -1, duration: 30, useNativeDriver: true }),
@@ -118,8 +130,27 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                     // ignore taps until board is ready
                     return;
                   } else if (isVertAdjacent || isHorzAdjacent) {
+                    // Play move sfx immediately (if enabled)
+                    if (enableSfx) playMove();
                     setPlayerPos(pos);
-                    moveMarkerTo(r, c);
+                    // Heal +1 on a valid move
+                    increaseHealth(1);
+                    // Animate slide then snap
+                    const layout = tileLayouts.current[keyFor(r, c)];
+                    if (layout) {
+                      const targetX = layout.x + layout.width / 2 - markerSize / 2;
+                      const targetY = layout.y + layout.height / 2 - markerSize / 2;
+                      Animated.spring(translate, {
+                        toValue: { x: targetX, y: targetY },
+                        useNativeDriver: true,
+                        friction: 12,
+                        tension: 180,
+                      }).start(() => {
+                        if (enableSfx) playSnap();
+                      });
+                    } else {
+                      moveMarkerTo(r, c);
+                    }
                     // Scale pulse
                     Animated.sequence([
                       Animated.timing(scale, { toValue: 0.9, duration: 80, useNativeDriver: true }),

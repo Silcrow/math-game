@@ -1,3 +1,10 @@
+
+## Backlog
+
+- SFX playback reliability
+  - Issue: Move/snap sounds intermittently not audible on device.
+  - Suspected causes: first-load race, platform audio mode quirks, WAV support variance.
+  - Actions later: add mount test-tone, logs; consider switching to MP3/OGG; preload in App.tsx; expose SFX toggle in Settings.
 # Math Game Development Roadmap
 
 ## Project Overview
