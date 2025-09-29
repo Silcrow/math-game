@@ -22,6 +22,8 @@ const GOLD_EDGE = '#f4d03f';
 
 export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected }) => {
   const [internalSelected, setInternalSelected] = useState<GridPos | null>(null);
+  // Player starts in the middle card (row 1, col 1)
+  const [playerPos, setPlayerPos] = useState<GridPos>({ row: 1, col: 1 });
 
   const isSelected = (r: number, c: number) => {
     const sel = selected ?? internalSelected;
@@ -48,6 +50,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                 onPress={() => {
                   const pos = { row: r, col: c } as GridPos;
                   setInternalSelected(pos);
+                  // Movement rule: rook-like one unit (horizontal or vertical by exactly one tile)
+                  const sameCol = c === playerPos.col;
+                  const sameRow = r === playerPos.row;
+                  const isVertAdjacent = sameCol && Math.abs(r - playerPos.row) === 1;
+                  const isHorzAdjacent = sameRow && Math.abs(c - playerPos.col) === 1;
+                  if (isVertAdjacent || isHorzAdjacent) {
+                    setPlayerPos(pos);
+                  }
                   onTilePress?.(pos);
                 }}
                 style={({ pressed }) => [
@@ -59,13 +69,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                 <View style={styles.cardFace}>
                   <Text style={styles.tileGlyph}>{glyph}</Text>
                   <Text style={styles.cardBottomGlyph}>{glyph}</Text>
+                  {playerPos.row === r && playerPos.col === c && (
+                    <View style={styles.playerMarker}>
+                      <Text style={styles.playerText}>P</Text>
+                    </View>
+                  )}
                 </View>
               </Pressable>
             );
           })}
         </View>
       ))}
-      <Text style={styles.help}>Tap a card to select it.</Text>
+      <Text style={styles.help}>Move the player like a rook by one tile (up/down/left/right).</Text>
     </View>
   );
 };
@@ -92,6 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.15)',
+    position: 'relative',
     // iOS shadow
     shadowColor: '#000',
     shadowOpacity: 0.2,
@@ -132,6 +148,25 @@ const styles = StyleSheet.create({
     color: '#2e7d32', // bottom green glyph
     fontSize: 24,
     fontWeight: '800',
+  },
+  playerMarker: {
+    position: 'absolute',
+    top: '40%',
+    left: '50%',
+    transform: [{ translateX: -14 }, { translateY: -14 }],
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#e63946',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(0,0,0,0.15)'
+  },
+  playerText: {
+    color: 'white',
+    fontWeight: '800',
+    fontSize: 14,
   },
   cardSubtitle: {
     color: '#6e7781',
