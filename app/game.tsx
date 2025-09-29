@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { GameScreen } from '../src/screens/GameScreen';
 import { useGameStore } from '../src/store/gameStore';
 import { useGameTick } from '../src/hooks/useGameTick';
@@ -9,9 +10,19 @@ export default function GameRoute() {
   const health = useGameStore((s) => s.health);
   const score = useGameStore((s) => s.score);
   const reset = useGameStore((s) => s.reset);
+  const router = useRouter();
 
   // Start ticking
   useGameTick();
+
+  // When health hits 0, navigate to High Score screen
+  useEffect(() => {
+    if (health === 0) {
+      // slight delay to allow last UI update
+      const t = setTimeout(() => router.replace('/highscore'), 150);
+      return () => clearTimeout(t);
+    }
+  }, [health]);
 
   return (
     <View style={styles.container}>
@@ -20,9 +31,11 @@ export default function GameRoute() {
       <GameScreen
         onTilePress={(pos) => {
           console.log('Tile pressed', pos);
-          if (health === 0) reset(); // simple demo: reset on tap after death
         }}
       />
+      {health === 0 && (
+        <Text style={styles.deadNote}>You died. Showing High Score…</Text>
+      )}
     </View>
   );
 }
@@ -46,5 +59,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 12,
+  },
+  deadNote: {
+    color: '#e6edf3',
+    marginTop: 8,
+    opacity: 0.8,
   },
 });

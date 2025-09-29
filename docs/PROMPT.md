@@ -1,11 +1,8 @@
 
-Construction plan of the game:
-- 3x3 tile, player character, health bar, health bar decreases, walk to tile, hp increases.
-	- right now health decreases over time, but with each move to a card, health should increase by 1.
-	- victory condition = survive as long as possible until death, then you get a top scoreboard (classic arcade style).
-	- failure condition = health bar 0. You lose (bring up the high score screen)
 
-Optionally scale the heal by tile/card value later.
+- Optionally scale the heal by tile/card value later.
+- when moving to a gold card, score incre 1.
+- victory condition when score = 10.
 
 modifying each aspect:
 - random addition and subtraction problems are displayed on the tile the player's not on (use randomizer first, later, it's an actual card in a deck, with more complicated randomizing rules). Player doesn't click tile to move anymore. Instead, tiles never repeat (always unique) and typing the answer immediately moves player to that tile.

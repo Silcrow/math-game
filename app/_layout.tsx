@@ -17,6 +17,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ title: 'Menu' }} />
         <Stack.Screen name="game" options={{ title: 'Game' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="highscore" options={{ title: 'High Score' }} />
       </Stack>
     </SafeAreaProvider>
   );
