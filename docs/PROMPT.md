@@ -1,13 +1,6 @@
 
-
-
-- Optionally scale the heal by tile/card value later.
-- when moving to a gold card, score incre 1.
-- victory condition when score = 10.
-
 modifying each aspect:
-- random addition and subtraction problems are displayed on the tile the player's not on (use randomizer first, later, it's an actual card in a deck, with more complicated randomizing rules). Player doesn't click tile to move anymore. Instead, tiles never repeat (always unique) and typing the answer immediately moves player to that tile.
-- healing is now unequal = earlier, each tile heals 2 units as a placeholder, but now construct a mechanism so that it heals either 1, 2, 3 units. Later, healing amount will be baed on a the card.
+- random addition and subtraction problems are displayed on the tile the player's not on (use randomizer first, later, it's an actual card in a deck, with more complicated randomizing rules). Player doesn't click tile to move anymore. Instead, the 8 tiles never duplicate (always unique) and typing the answer immediately moves player to that tile.
 - menu bar (like a character inventory, but a card deck manager) = like a flash card manager, but designed like an RPG game character's inventory menu
 	- Each card is 1 puzzle to solve (displayed), paired with an answer, and healing points (card has 3 stats).
 	- Cards can be grouped into decks. Each deck can have duplicate cards (this determines chance of being drawn and ensures drawn cards don't appear while undrawn cards appear, rather than a dice-like random appearance)
@@ -17,5 +10,10 @@ modifying each aspect:
 
 The above should be "game-name classic" version, with a "game settings" for adjusting pure numericals (for the sake of experimenting balancing the game), like gold random %, health drop rate, etc. Not sure yet what else should be adjustable, but I'll eventually want it to be fun but also pushes players to "learn math" by rewarding solving their weaknesses (this is complicated, coz it means reward mechanism adapts)
 
+- Optionally scale the heal by tile/card value later. Healing is now unequal = earlier, each tile heals 2 units as a placeholder, but now construct a mechanism so that it heals either 1, 2, 3 units. Later, healing amount will be baed on a the card.
+- when moving to a gold card, score incre 1.
+- victory condition when score = 10.
+
 things to add later
 - high score sharing should be a screenshot or something prettier, not text that looks like you can type yourself. (something that advertises the app/brand)
+- when score and health incre, I want a +1 animation on the HUD.

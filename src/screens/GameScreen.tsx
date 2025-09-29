@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Vibration, Switch } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Vibration } from 'react-native';
 import { playMove, playSnap } from '../sfx/sounds';
 import { useSettingsStore } from '../store/settingsStore';
 import { useGameStore } from '../store/gameStore';
@@ -27,6 +27,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   const [internalSelected, setInternalSelected] = useState<GridPos | null>(null);
   // Player starts in the middle card (row 1, col 1)
   const [playerPos, setPlayerPos] = useState<GridPos>({ row: 1, col: 1 });
+  const [answerText, setAnswerText] = useState('');
+  type Problem = { text: string; answer: number };
+  const [problems, setProblems] = useState<Record<string, Problem | null>>({}); // null when occupied (player)
   const scale = useRef(new Animated.Value(1)).current;
   const translate = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const shake = useRef(new Animated.Value(0)).current; // -1..1
@@ -94,6 +97,127 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   // Build as 3 rows x 3 columns for consistent spacing between cards
   const rows = useMemo(() => [0, 1, 2], []);
 
+  // Problem generation helpers
+  const allTileKeys = useMemo(() =>
+    Array.from({ length: SIZE * SIZE }, (_, i) => keyFor(Math.floor(i / SIZE), i % SIZE)),
+  []);
+
+  const generateProblem = (used: Set<number>): Problem => {
+    // simple add/sub within 1..9 ensuring positive answers
+    for (let tries = 0; tries < 100; tries++) {
+      const a = Math.floor(Math.random() * 9) + 1;
+      const b = Math.floor(Math.random() * 9) + 1;
+      const useAdd = Math.random() < 0.5;
+      const ans = useAdd ? a + b : a - b;
+      if (ans <= 0) continue;
+      if (used.has(ans)) continue;
+      return { text: `${a} ${useAdd ? '+' : '-'} ${b}`, answer: ans };
+    }
+    // fallback unique pick
+    let n = 1;
+    while (used.has(n)) n++;
+    return { text: `${n} + 0`, answer: n };
+  };
+
+  const regenerateBoardProblems = (pos: GridPos, prevPos?: GridPos) => {
+    setProblems((prev) => {
+      const next: Record<string, Problem | null> = { ...prev };
+      const used = new Set<number>();
+      // Collect existing answers excluding player tile and prev tile we'll regen
+      for (const k of allTileKeys) {
+        const [r, c] = k.split('-').map(Number);
+        if ((r === pos.row && c === pos.col)) {
+          next[k] = null; // occupied by player
+          continue;
+        }
+        if (prevPos && r === prevPos.row && c === prevPos.col) continue; // will regenerate
+        const p = next[k];
+        if (p) used.add(p.answer);
+      }
+      // Ensure all non-player tiles have a unique problem
+      for (const k of allTileKeys) {
+        const [r, c] = k.split('-').map(Number);
+        if (r === pos.row && c === pos.col) {
+          next[k] = null;
+          continue;
+        }
+        if (!next[k] || (prevPos && r === prevPos.row && c === prevPos.col)) {
+          const prob = generateProblem(used);
+          next[k] = prob;
+          used.add(prob.answer);
+        }
+      }
+      return next;
+    });
+  };
+
+  // Initialize problems when ready
+  useEffect(() => {
+    if (measured >= 9) {
+      regenerateBoardProblems(playerPos);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [measured]);
+
+  // Typing to move: parse number and move to matching tile (rook one step)
+  useEffect(() => {
+    if (!answerText) return;
+    if (!/^-?\d+$/.test(answerText)) return;
+    if (!isRunning) return;
+    const val = parseInt(answerText, 10);
+    // Find adjacent tiles with this answer (rook one step)
+    let target: GridPos | null = null;
+    const { row: pr, col: pc } = playerPos;
+    const adjacent = [
+      { row: pr - 1, col: pc },
+      { row: pr + 1, col: pc },
+      { row: pr, col: pc - 1 },
+      { row: pr, col: pc + 1 },
+    ];
+    for (const adj of adjacent) {
+      if (adj.row < 0 || adj.row >= SIZE || adj.col < 0 || adj.col >= SIZE) continue;
+      const p = problems[keyFor(adj.row, adj.col)];
+      if (p && p.answer === val) {
+        target = adj;
+        break;
+      }
+    }
+    if (!target) {
+      // Invalid answer or not adjacent
+      invalidTapFeedback();
+      setAnswerText('');
+      return;
+    }
+
+    // Move now
+    const from = playerPos;
+    const { row: r, col: c } = target;
+    setAnswerText('');
+    if (enableSfx) playMove();
+    setPlayerPos(target);
+    increaseHealth(1);
+    const layout = tileLayouts.current[keyFor(r, c)];
+    if (layout) {
+      const targetX = layout.x + layout.width / 2 - markerSize / 2;
+      const targetY = layout.y + layout.height / 2 - markerSize / 2;
+      Animated.spring(translate, {
+        toValue: { x: targetX, y: targetY },
+        useNativeDriver: true,
+        friction: 12,
+        tension: 180,
+      }).start(() => {
+        if (enableSfx) playSnap();
+      });
+    } else {
+      moveMarkerTo(r, c);
+    }
+    // Update problems: destination cleared (handled in regen), left tile gets a new one
+    regenerateBoardProblems(target, from);
+    // optional external callback
+    onTilePress?.(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answerText]);
+
   return (
     <View
       style={styles.wrapper}
@@ -114,55 +238,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
           {rows.map((c) => {
             const selectedTile = isSelected(r, c);
             const idx = r * SIZE + c;
-            const glyphs = ['一', '二', '三'];
-            const glyph = glyphs[idx % glyphs.length];
+            const prob = problems[keyFor(r, c)];
             return (
               <Pressable
                 key={`${r}-${c}`}
-                onPress={() => {
-                  if (!isRunning) return; // disable input when dead/paused
-                  const pos = { row: r, col: c } as GridPos;
-                  setInternalSelected(pos);
-                  // Movement rule: rook-like one unit (horizontal or vertical by exactly one tile)
-                  const sameCol = c === playerPos.col;
-                  const sameRow = r === playerPos.row;
-                  const isVertAdjacent = sameCol && Math.abs(r - playerPos.row) === 1;
-                  const isHorzAdjacent = sameRow && Math.abs(c - playerPos.col) === 1;
-                  if (measured < 9) {
-                    // ignore taps until board is ready
-                    return;
-                  } else if (isVertAdjacent || isHorzAdjacent) {
-                    // Play move sfx immediately (if enabled)
-                    if (enableSfx) playMove();
-                    setPlayerPos(pos);
-                    // Heal +1 on a valid move
-                    increaseHealth(1);
-                    // Animate slide then snap
-                    const layout = tileLayouts.current[keyFor(r, c)];
-                    if (layout) {
-                      const targetX = layout.x + layout.width / 2 - markerSize / 2;
-                      const targetY = layout.y + layout.height / 2 - markerSize / 2;
-                      Animated.spring(translate, {
-                        toValue: { x: targetX, y: targetY },
-                        useNativeDriver: true,
-                        friction: 12,
-                        tension: 180,
-                      }).start(() => {
-                        if (enableSfx) playSnap();
-                      });
-                    } else {
-                      moveMarkerTo(r, c);
-                    }
-                    // Scale pulse
-                    Animated.sequence([
-                      Animated.timing(scale, { toValue: 0.9, duration: 80, useNativeDriver: true }),
-                      Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: true }),
-                    ]).start();
-                  } else {
-                    invalidTapFeedback();
-                  }
-                  onTilePress?.(pos);
-                }}
+                disabled
                 style={({ pressed }) => [
                   styles.card,
                   selectedTile && styles.cardSelected,
@@ -183,8 +263,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
               }}
               >
                 <View style={styles.cardFace}>
-                  <Text style={styles.tileGlyph}>{glyph}</Text>
-                  <Text style={styles.cardBottomGlyph}>{glyph}</Text>
+                  {prob ? (
+                    <>
+                      <Text style={styles.problem}>{prob.text}</Text>
+                      <Text style={styles.answerHint}>= ?</Text>
+                    </>
+                  ) : (
+                    <Text style={styles.occupied}>You are here</Text>
+                  )}
                 </View>
               </Pressable>
             );
@@ -215,6 +301,28 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
       {!isRunning && (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
       )}
+
+      {/* Number pad at the bottom */}
+      <View style={styles.numPad}>
+        <View style={styles.numDisplay}>
+          <Text style={styles.numDisplayText}>{answerText || '–'}</Text>
+          <Pressable onPress={() => setAnswerText('')} style={styles.clearBtn}>
+            <Text style={styles.clearBtnText}>✕</Text>
+          </Pressable>
+        </View>
+        <View style={styles.numGrid}>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
+            <Pressable
+              key={n}
+              onPress={() => setAnswerText((prev) => prev + String(n))}
+              style={({ pressed }) => [styles.numBtn, pressed && styles.numBtnPressed]}
+              disabled={!isRunning}
+            >
+              <Text style={styles.numBtnText}>{n}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
@@ -309,5 +417,74 @@ const styles = StyleSheet.create({
     color: '#8b949e',
     marginTop: 6,
     textAlign: 'center',
+  },
+  problem: {
+    color: '#0b3d2e',
+    backgroundColor: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  answerHint: {
+    color: '#6e7781',
+    marginTop: 6,
+    fontWeight: '700',
+  },
+  occupied: {
+    color: '#58a6ff',
+    fontWeight: '800',
+  },
+  numPad: {
+    marginTop: 12,
+    width: '100%',
+  },
+  numDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  numDisplayText: {
+    color: '#e6edf3',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  clearBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  clearBtnText: {
+    color: '#e63946',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  numGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  numBtn: {
+    width: '18%',
+    aspectRatio: 1,
+    backgroundColor: '#116329',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  numBtnPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.95 }],
+  },
+  numBtnText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
   },
 });
