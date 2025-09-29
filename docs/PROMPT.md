@@ -15,3 +15,6 @@ modifying each aspect:
 - change victory condition = you still lose if your health bar zeroes, but there's a random chance a card is gold, and if you solved/collected/walked on the gold card 3x you win (in the future, this randomizer might be more sophisticated, but for now just pure random, like 20%).
 
 The above should be "game-name classic" version, with a "game settings" for adjusting pure numericals (for the sake of experimenting balancing the game), like gold random %, health drop rate, etc. Not sure yet what else should be adjustable, but I'll eventually want it to be fun but also pushes players to "learn math" by rewarding solving their weaknesses (this is complicated, coz it means reward mechanism adapts)
+
+things to add later
+- high score sharing should be a screenshot or something prettier, not text that looks like you can type yourself. (something that advertises the app/brand)

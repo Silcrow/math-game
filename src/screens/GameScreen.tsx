@@ -44,6 +44,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   const setEnableSfx = useSettingsStore((s) => s.setEnableSfx);
   const setEnableHaptics = useSettingsStore((s) => s.setEnableHaptics);
   const increaseHealth = useGameStore((s) => s.increaseHealth);
+  const isRunning = useGameStore((s) => s.isRunning);
 
   const keyFor = (r: number, c: number) => `${r}-${c}`;
 
@@ -119,6 +120,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
               <Pressable
                 key={`${r}-${c}`}
                 onPress={() => {
+                  if (!isRunning) return; // disable input when dead/paused
                   const pos = { row: r, col: c } as GridPos;
                   setInternalSelected(pos);
                   // Movement rule: rook-like one unit (horizontal or vertical by exactly one tile)
@@ -207,18 +209,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
         <Text style={styles.playerText}>P</Text>
       </Animated.View>
 
-      <Text style={styles.help}>
+      <Text style={[styles.help, !isRunning && { opacity: 0.6 }]}>
         {measured < 9 ? 'Preparing board…' : 'Move the player like a rook by one tile (up/down/left/right).'}
       </Text>
+      {!isRunning && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
+      )}
     </View>
   );
-};
+}
+;
 
 const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
     maxWidth: 420,
-    alignSelf: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     position: 'relative',

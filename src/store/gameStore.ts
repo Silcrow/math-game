@@ -25,7 +25,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   increaseHealth: (amount: number) => {
-    set({ health: get().health + amount });
+    const next = Math.min(100, get().health + amount);
+    set({ health: next });
   },
 
   increaseScore: (amount: number) => set({ score: get().score + amount }),
