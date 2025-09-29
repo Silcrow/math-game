@@ -1,5 +1,6 @@
 
 
+
 - Optionally scale the heal by tile/card value later.
 - when moving to a gold card, score incre 1.
 - victory condition when score = 10.

@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Share } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Share, ScrollView } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
 import { useGameStore } from '../src/store/gameStore';
 import { useSettingsStore } from '../src/store/settingsStore';
@@ -11,6 +11,11 @@ export default function HighScoreRoute() {
   const [best, setBest] = useState<number | null>(null);
   const [newBest, setNewBest] = useState(false);
   const nav = useNavigation();
+  type ScoreEntry = { score: number; ts: number };
+  const [scores, setScores] = useState<ScoreEntry[]>([]);
+  const [rank, setRank] = useState<number | null>(null);
+  const [totalRuns, setTotalRuns] = useState<number>(0);
+  const [currentTs] = useState<number>(() => Date.now());
 
   // Mute SFX/Haptics while on the High Score screen
   const enableSfx = useSettingsStore((s) => s.enableSfx);
@@ -35,19 +40,46 @@ export default function HighScoreRoute() {
       try {
         // Dynamic import so the app still runs if the package isn't installed yet
         const mod: any = await import('@react-native-async-storage/async-storage');
-        const raw = await mod.default.getItem('bestScore');
-        const prev = raw ? parseInt(raw, 10) : 0;
+        // Best score
+        const rawBest = await mod.default.getItem('bestScore');
+        const prevBest = rawBest ? parseInt(rawBest, 10) : 0;
         if (!mounted) return;
-        if (score > prev) {
+        if (score > prevBest) {
           setBest(score);
           setNewBest(true);
           await mod.default.setItem('bestScore', String(score));
         } else {
-          setBest(prev);
+          setBest(prevBest);
         }
+
+        // Scoreboard list + rank (with timestamps, latest ranks higher on tie)
+        const rawList = await mod.default.getItem('scores');
+        const parsed: any = rawList ? JSON.parse(rawList) : [];
+        let list: ScoreEntry[] = [];
+        if (Array.isArray(parsed)) {
+          if (parsed.length && typeof parsed[0] === 'number') {
+            // Backward-compat: old numeric entries
+            list = (parsed as number[]).map((n) => ({ score: n, ts: 0 }));
+          } else {
+            list = parsed.filter((e: any) => e && typeof e.score === 'number').map((e: any) => ({ score: e.score, ts: typeof e.ts === 'number' ? e.ts : 0 }));
+          }
+        }
+        const current: ScoreEntry = { score, ts: currentTs };
+        list.push(current);
+        list.sort((a, b) => (b.score - a.score) || (b.ts - a.ts));
+        const idx = list.findIndex((e) => e.score === current.score && e.ts === current.ts);
+        setRank(idx >= 0 ? idx + 1 : null);
+        setTotalRuns(list.length);
+        // Save back (keep last 100 entries to avoid unbounded growth)
+        const capped = list.slice(0, 100);
+        await mod.default.setItem('scores', JSON.stringify(capped));
+        setScores(capped.slice(0, 10)); // show top 10
       } catch {
         // Fallback: no storage available
         setBest(null);
+        setScores([] as ScoreEntry[]);
+        setRank(null);
+        setTotalRuns(0);
       }
     })();
     return () => { mounted = false; };
@@ -80,6 +112,9 @@ export default function HighScoreRoute() {
       {best !== null && !newBest && (
         <Text style={styles.best}>Best: {best}</Text>
       )}
+      {rank !== null && (
+        <Text style={styles.rank}>Your Rank: {rank}{totalRuns ? ` / ${totalRuns}` : ''}</Text>
+      )}
 
       <View style={styles.buttons}>
         <Pressable onPress={onRestart} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
@@ -92,6 +127,21 @@ export default function HighScoreRoute() {
           <Text style={styles.btnText}>Share</Text>
         </Pressable>
       </View>
+
+      {!!scores.length && (
+        <View style={styles.board}>
+          <Text style={styles.boardTitle}>Top Scores</Text>
+          <ScrollView style={{ maxHeight: 200 }}>
+            {scores.map((e, i) => (
+              <View key={`${e.score}-${e.ts}-${i}`} style={[styles.item, rank === i + 1 && styles.itemHighlight]}>
+                <Text style={styles.itemPos}>{i + 1}.</Text>
+                <Text style={styles.itemScore}>{e.score}</Text>
+                {rank === i + 1 && <Text style={styles.itemYou}>← you</Text>}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <Text style={styles.hint}>Tip: try to chain moves to out-heal the timer.</Text>
     </View>
@@ -161,5 +211,45 @@ const styles = StyleSheet.create({
   hint: {
     color: '#8b949e',
     marginTop: 16,
+  },
+  rank: {
+    color: '#e6edf3',
+    marginBottom: 12,
+    fontWeight: '700',
+  },
+  board: {
+    width: '100%',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 8,
+  },
+  boardTitle: {
+    color: '#e6edf3',
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  itemHighlight: {
+    backgroundColor: 'rgba(88,166,255,0.12)',
+  },
+  itemPos: {
+    width: 28,
+    color: '#8b949e',
+  },
+  itemScore: {
+    color: '#e6edf3',
+    fontWeight: '700',
+  },
+  itemYou: {
+    color: '#ffd700',
+    marginLeft: 8,
+    fontWeight: '800',
   },
 });
