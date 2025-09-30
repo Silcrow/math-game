@@ -1,5 +1,6 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Share, ScrollView } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 import { useRouter, useNavigation } from 'expo-router';
 import { useGameStore } from '../src/store/gameStore';
 import { useSettingsStore } from '../src/store/settingsStore';
@@ -15,6 +16,7 @@ export default function HighScoreRoute() {
   const [scores, setScores] = useState<ScoreEntry[]>([]);
   const [rank, setRank] = useState<number | null>(null);
   const [totalRuns, setTotalRuns] = useState<number>(0);
+  const viewRef = useRef<View>(null);
   const [currentTs] = useState<number>(() => Date.now());
 
   // Mute SFX/Haptics while on the High Score screen
@@ -97,14 +99,34 @@ export default function HighScoreRoute() {
 
   const onShare = async () => {
     try {
-      await Share.share({
-        message: `I scored ${score} in Math Game! Can you beat me?`,
-      });
+      let uri: string | undefined;
+      // Capture screenshot
+      if (viewRef.current) {
+        try {
+          uri = await captureRef(viewRef, {
+            format: 'png',
+            quality: 0.8,
+          });
+        } catch (e) {
+          console.warn('Screenshot capture failed', e);
+        }
+      }
+      // Share with screenshot if available
+      const shareMessage = `🧙✨ Math Game Score ✨🧙\n\n🎯 Score: ${score}\n${rank ? `🏆 Rank: ${rank}/${totalRuns}\n` : ''}${newBest ? '⭐ NEW BEST! ⭐\n' : ''}\nCan you beat me? 🔥\n\n📱 Play Math Game`;
+      await Share.share(
+        {
+          message: shareMessage,
+          url: uri,
+        },
+        {
+          dialogTitle: 'Share your score',
+        }
+      );
     } catch {}
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} ref={viewRef} collapsable={false}>
       <Text style={styles.title}>Game Over</Text>
       <Text style={styles.subTitle}>Your Score</Text>
       <Text style={styles.score}>{score}</Text>
