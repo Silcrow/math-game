@@ -30,16 +30,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   const [answerText, setAnswerText] = useState('');
   type Problem = { text: string; answer: number };
   const [problems, setProblems] = useState<Record<string, Problem | null>>({}); // null when occupied (player)
-  const scale = useRef(new Animated.Value(1)).current;
-  const translate = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const shake = useRef(new Animated.Value(0)).current; // -1..1
   const wrapperLayout = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const tileLayouts = useRef<Record<string, { x: number; y: number; width: number; height: number }>>({});
   const rowLayouts = useRef<Record<number, { x: number; y: number }>>({});
   const measuredKeys = useRef<Set<string>>(new Set());
   const [measured, setMeasured] = useState(0);
-
-  const markerSize = 28;
 
   // Settings (SFX/Haptics)
   const enableSfx = useSettingsStore((s) => s.enableSfx);
@@ -51,41 +46,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
 
   const keyFor = (r: number, c: number) => `${r}-${c}`;
 
-  const moveMarkerTo = (r: number, c: number) => {
-    const layout = tileLayouts.current[keyFor(r, c)];
-    if (!layout) return; // not laid out yet
-    // Center of the tile within wrapper
-    const targetX = layout.x + layout.width / 2 - markerSize / 2;
-    const targetY = layout.y + layout.height / 2 - markerSize / 2;
-    Animated.spring(translate, {
-      toValue: { x: targetX, y: targetY },
-      useNativeDriver: true,
-      friction: 12,
-      tension: 180,
-    }).start();
-  };
-
   const invalidTapFeedback = () => {
     // brief vibrate (if supported)
     if (enableHaptics) {
       try { Vibration.vibrate(20); } catch {}
     }
-    // shake animation sequence
-    Animated.sequence([
-      Animated.timing(shake, { toValue: -1, duration: 30, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 1, duration: 60, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: -1, duration: 60, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 1, duration: 60, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 0, duration: 30, useNativeDriver: true }),
-    ]).start();
   };
-
-  // Initialize marker once all 9 tiles have measured
-  useEffect(() => {
-    if (measured >= 9) {
-      moveMarkerTo(playerPos.row, playerPos.col);
-    }
-  }, [playerPos.row, playerPos.col, measured]);
 
   const isSelected = (r: number, c: number) => {
     const sel = selected ?? internalSelected;
@@ -159,8 +125,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [measured]);
 
-  // Typing to move: parse number and move to matching tile (rook one step)
-  useEffect(() => {
+  const handleSubmit = () => {
     if (!answerText) return;
     if (!/^-?\d+$/.test(answerText)) return;
     if (!isRunning) return;
@@ -196,36 +161,22 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
     if (enableSfx) playMove();
     setPlayerPos(target);
     increaseHealth(1);
-    const layout = tileLayouts.current[keyFor(r, c)];
-    if (layout) {
-      const targetX = layout.x + layout.width / 2 - markerSize / 2;
-      const targetY = layout.y + layout.height / 2 - markerSize / 2;
-      Animated.spring(translate, {
-        toValue: { x: targetX, y: targetY },
-        useNativeDriver: true,
-        friction: 12,
-        tension: 180,
-      }).start(() => {
-        if (enableSfx) playSnap();
-      });
-    } else {
-      moveMarkerTo(r, c);
-    }
+    if (enableSfx) playSnap();
     // Update problems: destination cleared (handled in regen), left tile gets a new one
     regenerateBoardProblems(target, from);
     // optional external callback
     onTilePress?.(target);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answerText]);
+  };
 
   return (
-    <View
-      style={styles.wrapper}
-      onLayout={(e) => {
-        const { x, y, width, height } = e.nativeEvent.layout;
-        wrapperLayout.current = { x, y, width, height };
-      }}
-    >
+    <View style={styles.wrapper}>
+      <View
+        style={styles.boardWrapper}
+        onLayout={(e) => {
+          const { x, y, width, height } = e.nativeEvent.layout;
+          wrapperLayout.current = { x, y, width, height };
+        }}
+      >
       {rows.map((r) => (
         <View
           key={`row-${r}`}
@@ -262,14 +213,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
                 }
               }}
               >
-                <View style={styles.cardFace}>
+                <View style={[styles.cardFace, !prob && styles.playerCard]}>
                   {prob ? (
-                    <>
-                      <Text style={styles.problem}>{prob.text}</Text>
-                      <Text style={styles.answerHint}>= ?</Text>
-                    </>
+                    <Text style={styles.problem}>{prob.text}</Text>
                   ) : (
-                    <Text style={styles.occupied}>You are here</Text>
+                    <Text style={styles.playerEmoji}>🧙</Text>
                   )}
                 </View>
               </Pressable>
@@ -277,30 +225,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
           })}
         </View>
       ))}
-      {/* Floating player marker overlay */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.playerMarker,
-          {
-            transform: [
-              { translateX: translate.x },
-              { translateY: translate.y },
-              { scale },
-              { translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }) },
-            ],
-          },
-        ]}
-      >
-        <Text style={styles.playerText}>P</Text>
-      </Animated.View>
+      {!isRunning && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
+      )}
+      </View>
 
       <Text style={[styles.help, !isRunning && { opacity: 0.6 }]}>
         {measured < 9 ? 'Preparing board…' : 'Move the player like a rook by one tile (up/down/left/right).'}
       </Text>
-      {!isRunning && (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
-      )}
 
       {/* Number pad at the bottom */}
       <View style={styles.numPad}>
@@ -311,7 +243,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
           </Pressable>
         </View>
         <View style={styles.numGrid}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => (
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
             <Pressable
               key={n}
               onPress={() => setAnswerText((prev) => prev + String(n))}
@@ -321,6 +253,27 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
               <Text style={styles.numBtnText}>{n}</Text>
             </Pressable>
           ))}
+          <Pressable
+            onPress={() => setAnswerText((prev) => prev.slice(0, -1))}
+            style={({ pressed }) => [styles.numBtn, styles.backspaceBtn, pressed && styles.numBtnPressed]}
+            disabled={!isRunning}
+          >
+            <Text style={styles.numBtnText}>←</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setAnswerText((prev) => prev + '0')}
+            style={({ pressed }) => [styles.numBtn, pressed && styles.numBtnPressed]}
+            disabled={!isRunning}
+          >
+            <Text style={styles.numBtnText}>0</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleSubmit}
+            style={({ pressed }) => [styles.numBtn, styles.enterBtn, pressed && styles.numBtnPressed]}
+            disabled={!isRunning}
+          >
+            <Text style={styles.numBtnText}>↵</Text>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -330,44 +283,48 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
 
 const styles = StyleSheet.create({
   wrapper: {
+    flex: 1,
     width: '100%',
-    maxWidth: 420,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  boardWrapper: {
+    width: '100%',
     position: 'relative',
+    justifyContent: 'center',
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 8,
+    marginVertical: 4,
   },
   card: {
     width: '30%', // three per row with spacing
-    aspectRatio: 0.7, // taller than wide, like a mahjong tile
+    aspectRatio: 0.8, // slightly less tall
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.15)',
     position: 'relative',
     // iOS shadow
     shadowColor: '#000',
     shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
     // Android elevation
-    elevation: 3,
+    elevation: 2,
   },
   cardFace: {
     flex: 1,
     width: '100%',
     height: '100%',
     backgroundColor: '#fff9ee', // ivory tile face
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
+    justifyContent: 'center',
+    paddingVertical: 6,
     // subtle inner border to mimic tile edge
     borderWidth: 1,
     borderColor: '#e6dfd4',
@@ -392,21 +349,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
   },
-  playerMarker: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#e63946',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.15)'
+  playerCard: {
+    backgroundColor: 'rgba(88, 166, 255, 0.15)',
   },
-  playerText: {
-    color: 'white',
-    fontWeight: '800',
-    fontSize: 14,
+  playerEmoji: {
+    fontSize: 32,
   },
   cardSubtitle: {
     color: '#6e7781',
@@ -415,29 +362,27 @@ const styles = StyleSheet.create({
   },
   help: {
     color: '#8b949e',
-    marginTop: 6,
+    marginTop: 2,
+    marginBottom: 2,
     textAlign: 'center',
+    fontSize: 11,
   },
   problem: {
     color: '#0b3d2e',
     backgroundColor: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   answerHint: {
     color: '#6e7781',
     marginTop: 6,
     fontWeight: '700',
   },
-  occupied: {
-    color: '#58a6ff',
-    fontWeight: '800',
-  },
   numPad: {
-    marginTop: 12,
+    marginTop: 4,
     width: '100%',
   },
   numDisplay: {
@@ -445,23 +390,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 8,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 4,
   },
   numDisplayText: {
     color: '#e6edf3',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
   },
   clearBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   clearBtnText: {
     color: '#e63946',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
   },
   numGrid: {
@@ -470,13 +415,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   numBtn: {
-    width: '18%',
-    aspectRatio: 1,
+    width: '30%',
+    aspectRatio: 1.4,
     backgroundColor: '#116329',
-    borderRadius: 8,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 3,
+  },
+  backspaceBtn: {
+    backgroundColor: '#6e7781',
+  },
+  enterBtn: {
+    backgroundColor: '#1f6feb',
   },
   numBtnPressed: {
     opacity: 0.7,
@@ -484,7 +435,7 @@ const styles = StyleSheet.create({
   },
   numBtnText: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
   },
 });

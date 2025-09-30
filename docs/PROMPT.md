@@ -1,10 +1,12 @@
 
 modifying each aspect:
-- random addition and subtraction problems are displayed on the tile the player's not on (use randomizer first, later, it's an actual card in a deck, with more complicated randomizing rules). Player doesn't click tile to move anymore. Instead, the 8 tiles never duplicate (always unique) and typing the answer immediately moves player to that tile.
+
+when pressing share, not only does it share as a message, but also a screenshot of the game.
+
 - menu bar (like a character inventory, but a card deck manager) = like a flash card manager, but designed like an RPG game character's inventory menu
 	- Each card is 1 puzzle to solve (displayed), paired with an answer, and healing points (card has 3 stats).
 	- Cards can be grouped into decks. Each deck can have duplicate cards (this determines chance of being drawn and ensures drawn cards don't appear while undrawn cards appear, rather than a dice-like random appearance)
-	- a deck can be chosen for a game.
+	- a deck can be chosen for a game.f
 	- all the above are "custom decks", but game already has built-in decks to choose from (the balanced or educational stacks of flash card / problems)
 - change victory condition = you still lose if your health bar zeroes, but there's a random chance a card is gold, and if you solved/collected/walked on the gold card 3x you win (in the future, this randomizer might be more sophisticated, but for now just pure random, like 20%).
 
@@ -17,3 +19,4 @@ The above should be "game-name classic" version, with a "game settings" for adju
 things to add later
 - high score sharing should be a screenshot or something prettier, not text that looks like you can type yourself. (something that advertises the app/brand)
 - when score and health incre, I want a +1 animation on the HUD.
+- settings theme: halloween

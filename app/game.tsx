@@ -26,8 +26,11 @@ export default function GameRoute() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Game</Text>
-      <Text style={styles.hud}>Health: {health} | Score: {score}</Text>
+      {/* Top bar HUD */}
+      <View style={styles.hud}>
+        <Text style={styles.hudText}>HP: {health}</Text>
+        <Text style={styles.hudText}>Score: {score}</Text>
+      </View>
       <GameScreen
         onTilePress={(pos) => {
           console.log('Tile pressed', pos);
@@ -44,21 +47,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0b3d2e',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  header: {
-    color: '#e6edf3',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
   },
   hud: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  hudText: {
     color: '#58a6ff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 12,
   },
   deadNote: {
     color: '#e6edf3',
