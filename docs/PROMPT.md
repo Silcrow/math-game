@@ -1,4 +1,5 @@
 
+score should not increase per second, but only when the player moved to a card
 
 Game mode: Collect 3 gold cards to win (beta tester mode, no deck, but random +/-). 
 - change victory condition = you still lose if your health bar zeroes, but there's a random chance a card is gold, and if you solved/collected/walked on the gold card 3x you win
@@ -14,7 +15,6 @@ Game mode: Collect 3 gold cards to win (beta tester mode, no deck, but random +/
 	- all the above are "custom decks", but game already has built-in decks to choose from (the balanced or educational stacks of flash card / problems)
 
 things to add later
-- high score sharing should be a screenshot or something prettier, not text that looks like you can type yourself. (something that advertises the app/brand)
 - when score and health incre, I want a +1 animation on the HUD.
 - settings theme: halloween
 - deck builder = originally, each card's rank which gives a score, the score is basically "damage" per spell (how quickly you solve is the cast time). But in a deck, you can mod each card with "effects" instead of damage. The more powerful the card rank, the more powerful effects you can mod. (ask GPT about fun effects. Don't add generic effects, only add really fun ones unique to this game.)

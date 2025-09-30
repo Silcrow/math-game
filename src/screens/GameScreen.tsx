@@ -42,6 +42,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
   const setEnableSfx = useSettingsStore((s) => s.setEnableSfx);
   const setEnableHaptics = useSettingsStore((s) => s.setEnableHaptics);
   const increaseHealth = useGameStore((s) => s.increaseHealth);
+  const increaseScore = useGameStore((s) => s.increaseScore);
   const isRunning = useGameStore((s) => s.isRunning);
 
   const keyFor = (r: number, c: number) => `${r}-${c}`;
@@ -161,6 +162,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ onTilePress, selected })
     if (enableSfx) playMove();
     setPlayerPos(target);
     increaseHealth(1);
+    increaseScore(1);
     if (enableSfx) playSnap();
     // Update problems: destination cleared (handled in regen), left tile gets a new one
     regenerateBoardProblems(target, from);
